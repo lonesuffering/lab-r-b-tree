@@ -1,0 +1,353 @@
+#include <iostream>
+#include <string>
+#include <ctime>
+#include <cmath>
+#include <cstdlib>
+
+enum Color { RED, BLACK };
+
+typedef int some_object;
+
+template <typename T>
+struct Node {
+    T data;
+    Node* parent;
+    Node* left;
+    Node* right;
+    Color color;
+    int index;
+};
+
+template <typename T>
+class RBTree {
+private:
+    Node<T>* root;
+    Node<T>* NIL;
+    int size;
+
+public:
+    static bool some_objects_cmp(some_object a, some_object b) {
+        return a < b;
+    }
+    
+    RBTree() {
+        NIL = new Node<T>;
+        NIL->color = BLACK;
+        root = NIL;
+        size = 0;
+    }
+
+    Node<T>* getRoot() const {
+        return root;
+    }
+
+    Node<T>* searchTree(T key);
+    void preOrderHelper(Node<T>* node);
+    void inOrderHelper(Node<T>* node);
+    void deleteTree(Node<T>* node);
+    void insert(T key);
+    std::string toString();
+    void leftRotate(Node<T>* x);
+    void rightRotate(Node<T>* x);
+    void fixInsert(Node<T>* k);
+    void clear(Node<T>* node);
+    void clearTree();
+    std::string toStringHelper(Node<T>* node);
+
+    ~RBTree() {
+        deleteTree(root);
+    }
+};
+
+template <typename T>
+Node<T>* RBTree<T>::searchTree(T key) {
+    Node<T>* temp = root;
+    while (temp != NIL && key != temp->data) {
+        if (key < temp->data) {
+            temp = temp->left;
+        }
+        else {
+            temp = temp->right;
+        }
+    }
+    return temp;
+}
+
+template <typename T>
+void RBTree<T>::preOrderHelper(Node<T>* node) {
+    if (node != NIL) {
+        std::cout << node->data << " ";
+        preOrderHelper(node->left);
+        preOrderHelper(node->right);
+    }
+}
+
+template <typename T>
+void RBTree<T>::inOrderHelper(Node<T>* node) {
+    if (node != NIL) {
+        inOrderHelper(node->left);
+        std::cout << node->data << " ";
+        inOrderHelper(node->right);
+    }
+}
+
+template <typename T>
+void RBTree<T>::deleteTree(Node<T>* node) {
+    if (node != NIL) {
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
+    }
+}
+
+
+
+template <typename T>
+void RBTree<T>::insert(T key) {
+    // create new node  
+    Node<T>* node = new Node<T>;
+    node->parent = nullptr;
+    node->data = key;
+    node->left = NIL;
+    node->right = NIL;
+    node->color = RED; // always red new node
+    node->index = ++size; // unique index   
+
+    // Inserting the first node
+    Node<T>* y = nullptr;
+    Node<T>* x = this->root;
+
+    while (x != NIL) {
+        y = x;
+        if (node->data < x->data) {
+            x = x->left;
+        }
+        else {
+            x = x->right;
+        }
+    }
+
+    // y is the parent of the node
+    node->parent = y;
+    if (y == nullptr) {
+        root = node;
+    }
+    else if (node->data < y->data) {
+        y->left = node;
+    }
+    else {
+        y->right = node;
+    }
+
+    // fix
+    fixInsert(node);
+}
+
+
+template <typename T>
+void RBTree<T>::fixInsert(Node<T>* k) {
+    while (k->parent != nullptr && k->parent->color == RED) {
+        if (k->parent == k->parent->parent->left) {
+            Node<T>* u = k->parent->parent->right; // uncle
+
+            if (u != nullptr && u->color == RED) {
+                // Case 1: Uncle is red
+                u->color = BLACK;
+                k->parent->color = BLACK;
+                k->parent->parent->color = RED;
+                k = k->parent->parent;
+            }
+            else {
+                if (k == k->parent->right) {
+                    // Case 2: Uncle is black and k is a right child
+                    k = k->parent;
+                    leftRotate(k);
+                }
+
+                // Case 3: Uncle is black and k is a left child
+                k->parent->color = BLACK;
+                if (k->parent->parent != nullptr) {
+                    k->parent->parent->color = RED;
+                    rightRotate(k->parent->parent);
+                }
+            }
+        }
+        else {
+            // Symmetric cases for right child
+            Node<T>* u = k->parent->parent->left; // uncle
+
+            if (u != nullptr && u->color == RED) {
+                // Case 1: Uncle is red
+                u->color = BLACK;
+                k->parent->color = BLACK;
+                k->parent->parent->color = RED;
+                k = k->parent->parent;
+            }
+            else {
+                if (k == k->parent->left) {
+                    // Case 2: Uncle is black and k is a left child
+                    k = k->parent;
+                    rightRotate(k);
+                }
+
+                // Case 3: Uncle is black and k is a right child
+                k->parent->color = BLACK;
+                if (k->parent->parent != nullptr) {
+                    k->parent->parent->color = RED;
+                    leftRotate(k);
+                }
+            }
+        }
+    }
+
+    // Make sure the root is black
+    root->color = BLACK;
+}
+
+template <typename T>
+std::string RBTree<T>::toStringHelper(Node<T>* node) {
+    if (node == NIL) {
+        return "";
+    }
+
+    std::string str = "(" + std::to_string(node->index) + ": [" +
+        (node->color == RED ? "red" : "black") +
+        ", p: " + (node->parent ? std::to_string(node->parent->index) : "NULL") +
+        ", l: " + (node->left != NIL ? std::to_string(node->left->index) : "NULL") +
+        ", r: " + (node->right != NIL ? std::to_string(node->right->index) : "NULL") +
+        "] (" + std::to_string(node->data) + "))";
+
+    return str + "\n" + toStringHelper(node->left) + toStringHelper(node->right);
+}
+template <typename T>
+std::string RBTree<T>::toString() {
+    std::string str = "red black tree:\n";
+    str += "size: " + std::to_string(size) + "\n{\n";
+    str += toStringHelper(root);
+    str += "}\n";
+    std::cout << str;
+    return str;
+}
+
+template <typename T>
+void RBTree<T>::leftRotate(Node<T>* x) {
+    if (x->right != NIL) {
+        Node<T>* y = x->right;
+        x->right = y->left;
+        if (y->left != NIL) {
+            y->left->parent = x;
+        }
+
+        y->parent = x->parent;
+
+        if (x->parent == nullptr) {
+            this->root = y;
+        }
+        else if (x == x->parent->left) {
+            x->parent->left = y;
+        }
+        else {
+            x->parent->right = y;
+        }
+
+        y->left = x;
+        x->parent = y;
+    }
+}
+
+template <typename T>
+void RBTree<T>::rightRotate(Node<T>* x) {
+    if (x->left != NIL) {
+        Node<T>* y = x->left;
+        x->left = y->right;
+        if (y->right != NIL) {
+            y->right->parent = x;
+        }
+
+        y->parent = x->parent;
+
+        if (x->parent == nullptr) {
+            this->root = y;
+        }
+        else if (x == x->parent->left) {
+            x->parent->left = y;
+        }
+        else {
+            x->parent->right = y;
+        }
+
+        y->right = x;
+        x->parent = y;
+    }
+}
+
+template <typename T>
+void RBTree<T>::clear(Node<T>* node) {
+    if (node != NIL) {
+        clear(node->left);
+        clear(node->right);
+        delete node;
+    }
+}
+
+template <typename T>
+void RBTree<T>::clearTree() {
+    clear(root);
+    root = NIL;
+}
+
+
+int main()
+{
+    const int MAX_ORDER = 7;
+    RBTree<some_object*>* rbt = new RBTree<some_object*>(); // create tree
+    for (int o = 1; o <= MAX_ORDER; o++) {
+        const int n = pow(10, o);
+        clock_t t1 = clock();
+        for (int i = 0; i < n; i++) {
+            some_object* so = new some_object(rand());
+
+            rbt->insert(so);
+
+        }
+        clock_t t2 = clock();
+
+
+        std::cout << rbt->toString() << std::endl;
+        std::cout << "Time: " << double(t2 - t1) / CLOCKS_PER_SEC << " seconds" << std::endl;
+
+        const int m = pow(10, 4);
+        int hits = 0;   
+        t1 = clock();   
+        for (int i = 0; i < m; i++) {
+            some_object* so = new some_object(rand());
+            Node<some_object*>* result = rbt->searchTree(so);
+            if (result != NULL)
+                hits++;
+            delete so;
+		}
+		t2 = clock();
+		std::cout << "Hits: " << hits << std::endl;
+        std::cout << "Time: " << double(t2 - t1) / CLOCKS_PER_SEC << " seconds" << std::endl;
+		std::cout << "-----------------------------------" << std::endl;    
+
+        rbt->clearTree();
+
+    }
+         delete rbt;
+        return 0; 
+}
+
+//int main()
+//{
+//    RBTree<int> tree;
+//    tree.insert(7);
+//    tree.insert(6);
+//    tree.insert(5);
+//    tree.insert(4);
+//    tree.insert(3);
+//    tree.insert(2);
+//    tree.insert(1);
+//    std::cout << tree.toString() << std::endl;
+//    return 0;
+//}
